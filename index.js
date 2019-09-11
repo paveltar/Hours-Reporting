@@ -20,10 +20,48 @@ const mapDaysToReadableFormat = ({ date, start, finish, hoursWorked, extraWorked
     extraWorkedHours: printReadable(extraWorkedHours),
 })
 
-const parsedDays = []
+const constraints = {
+    halfHoliday: {
+        // values: ['08/09/2019'],
+        amount: 4.5
+    },
+    vacations: {
+        // values: ['10/09/2019'],
+        amount: 0,
+    },
+    regularDay: {
+        values: [0, 1, 2, 3],
+        amount: 9
+    },
+    thursday: {
+        values: [4], // 4th day of the week
+        amount: 8.5
+    }
+}
 
-const hoursPerDay = 9
-const hoursPerDayThursday = 8.5
+const getHoursToWork = date => {
+
+    dayOfTheWeek = date.day()
+    formatedDate = date.format(dateFormat)
+
+    // Object.keys(constraints).forEach(key => {
+    //     const { values, amount } = constraints[key]
+    //     if (values.includes(dayOfTheWeek) || values.includes(formatedDate)) {
+    //         hoursToWork = amount
+    //     }
+    // })
+
+    for (const key in constraints) {
+        if (constraints.hasOwnProperty(key)) {
+            const { values, amount } = constraints[key]
+            if (values && !isNaN(amount) && (values.includes(dayOfTheWeek) || values.includes(formatedDate))) return amount
+        }
+    }
+
+    return constraints.regularDay.amount
+}
+
+const parsedDays = []
 
 data.slice(1, data.length).forEach(item => {
 
@@ -36,7 +74,10 @@ data.slice(1, data.length).forEach(item => {
     const finish = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[7]))}`, `${dateFormat} ${timeFormat}`)
 
     const hoursWorked = moment.duration(finish.diff(start), 'ms')
-    const timeToLeave = start.clone().add(date.day() === 4 ? hoursPerDayThursday : hoursPerDay, 'hours')
+
+    const timeToLeave = start.clone().add(getHoursToWork(date), 'hours')
+
+    // console.log(getHoursToWork(date))
 
     const extraWorkedHours = moment.duration(finish.diff(timeToLeave), 'ms')
 
