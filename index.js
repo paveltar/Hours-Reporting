@@ -1,20 +1,26 @@
-// 34251_Export20190910_192054861.xlsx
-
 var xlsx = require('node-xlsx').default
 var moment = require('moment')
 
 const workSheetsFromFile = xlsx.parse(`${__dirname}/report.xlsx`);
 
-const {data} = workSheetsFromFile[0]
+const { data } = workSheetsFromFile[0]
 
-const momentFormat = 'DD/MM/YYYY'
+const dateFormat = 'DD/MM/YYYY'
+const timeFormat = 'HH:mm'
 
-const mathRound = value => parseInt(Math.ceil(value * 10) / 10)
 const parseXlsTime = xlsTime => moment.duration(parseInt(Math.ceil(xlsTime * 24 * 60 * 10) / 10), 'minutes')
 const zeroPadding = (value, padding, paddWith = '0') => value.length < padding ? `${paddWith.repeat(padding - value.length)}${value}` : value
 const printReadable = duration => `${duration.hours()}:${zeroPadding(String(duration.minutes()), 2)}`
 
-const parsedData = []
+const mapDaysToReadableFormat = ({ date, start, finish, hoursWorked, extraWorkedHours }) => ({
+    date: date.format(dateFormat),
+    start: start.format(timeFormat),
+    finish: finish.format(timeFormat),
+    hoursWorked: printReadable(hoursWorked),
+    extraWorkedHours: printReadable(extraWorkedHours),
+})
+
+const parsedDays = []
 
 const hoursPerDay = 9
 const hoursPerDayThursday = 8.5
@@ -24,23 +30,35 @@ data.slice(1, data.length).forEach(item => {
     // needs both!!
     if (!item[6] || !item[7]) return
 
-    const date = moment(item[3], momentFormat)
-    const start = parseXlsTime(item[6])
-    const finish = parseXlsTime(item[7])
+    const date = moment(item[3], dateFormat)
 
-    const diffInSeconds = finish.asSeconds() - start.asSeconds()
-    const total = moment.duration(diffInSeconds, 'seconds')
+    const start = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[6]))}`, `${dateFormat} ${timeFormat}`)
+    const finish = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[7]))}`, `${dateFormat} ${timeFormat}`)
 
-    // const extraHours = moment.duration(total.asHours() - (date.day() === 4 ? hoursPerDayThursday : hoursPerDay), 'hours')
+    const hoursWorked = moment.duration(finish.diff(start), 'ms')
+    const timeToLeave = start.clone().add(date.day() === 4 ? hoursPerDayThursday : hoursPerDay, 'hours')
 
-    parsedData.push({
-        date: date.format(momentFormat),
-        start: printReadable(start), 
-        finish: printReadable(finish),
-        total: printReadable(total),
-        // extraHours: printReadable(extraHours),
+    const extraWorkedHours = moment.duration(finish.diff(timeToLeave), 'ms')
+
+    parsedDays.push({
+        date,
+        start,
+        finish,
+        hoursWorked,
+        extraWorkedHours,
     })
-
 })
 
-console.log(parsedData)
+const getTotalHours = param => parsedDays.reduce((total, value, index) => {
+    if (index === 0) return total
+    return total.add(value[param])
+}, parsedDays[0][param].clone())
+
+const report = {
+    parsedDays: parsedDays.map(mapDaysToReadableFormat),
+    totalExtraWorkedHours: getTotalHours('extraWorkedHours').asHours(),
+    totalHoursWorked: getTotalHours('hoursWorked').asHours(),
+    dayCounted: parsedDays.length
+}
+
+console.log(report)
