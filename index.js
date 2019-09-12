@@ -3,8 +3,6 @@ const moment = require('moment')
 
 const workSheetsFromFile = xlsx.parse(`${__dirname}/report.xlsx`);
 
-const { data } = workSheetsFromFile[0]
-
 const dateFormat = 'DD/MM/YYYY'
 const timeFormat = 'HH:mm'
 
@@ -61,34 +59,41 @@ const getHoursToWork = date => {
     return constraints.regularDay.amount
 }
 
-const parsedDays = []
+const parseXlsData = ({ data }) => {
 
-data.slice(1, data.length).forEach(item => {
+    const parsedDays = []
 
-    // needs both!!
-    if (!item[6] || !item[7]) return
+    data.slice(1, data.length).forEach(item => {
 
-    const date = moment(item[3], dateFormat)
+        // needs both!!
+        if (!item[6] || !item[7]) return
 
-    const start = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[6]))}`, `${dateFormat} ${timeFormat}`)
-    const finish = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[7]))}`, `${dateFormat} ${timeFormat}`)
+        const date = moment(item[3], dateFormat)
 
-    const timeWorked = moment.duration(finish.diff(start), 'ms')
+        const start = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[6]))}`, `${dateFormat} ${timeFormat}`)
+        const finish = moment(`${date.format(dateFormat)} ${printReadable(parseXlsTime(item[7]))}`, `${dateFormat} ${timeFormat}`)
 
-    const timeToLeave = start.clone().add(getHoursToWork(date), 'hours')
+        const timeWorked = moment.duration(finish.diff(start), 'ms')
 
-    // console.log(getHoursToWork(date))
+        const timeToLeave = start.clone().add(getHoursToWork(date), 'hours')
 
-    const extraTimeWorked = moment.duration(finish.diff(timeToLeave), 'ms')
+        // console.log(getHoursToWork(date))
 
-    parsedDays.push({
-        date,
-        start,
-        finish,
-        timeWorked,
-        extraTimeWorked,
+        const extraTimeWorked = moment.duration(finish.diff(timeToLeave), 'ms')
+
+        parsedDays.push({
+            date,
+            start,
+            finish,
+            timeWorked,
+            extraTimeWorked,
+        })
     })
-})
+
+    return parsedDays
+}
+
+const parsedDays = parseXlsData(workSheetsFromFile[0])
 
 const getTotalHours = param => parsedDays.reduce((total, value, index) => {
     if (index === 0) return total
