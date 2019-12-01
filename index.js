@@ -20,8 +20,12 @@ const mapDaysToReadableFormat = ({ date, start, finish, timeWorked, extraTimeWor
 
 const constraints = {
     halfHoliday: {
-        // values: ['08/09/2019'],
+        values: ['13/10/2019', '20/10/2019'],
         amount: 4.5
+    },
+    customHoliday: {
+        values: ['08/10/2019'],
+        amount: 4
     },
     vacations: {
         // values: ['10/09/2019'],

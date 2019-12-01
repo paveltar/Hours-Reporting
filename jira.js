@@ -1,4 +1,5 @@
 const axios = require('axios')
+const moment = require('moment')
 const parsedDays = require('.')
 
 const headers = {
@@ -26,9 +27,9 @@ const app = axios.create({
 })
 
 // TODO: convert to Promise.all
-const init = async () => { 
+const start = async () => {
     for (let i = 0; i < parsedDays.length; i++) {
-        const { start, timeWorked } = parsedDays[i]
+        const { start, timeWorked, date } = parsedDays[i]
         const data = {
             comment: 'working', // add your comment here
             started: start.format('YYYY-MM-DDTHH:mm:ss.SSS'),
@@ -42,9 +43,42 @@ const init = async () => {
                 ...data,
             }
         }
+
+        // // in case you want to dismiss days before specific date
+        // if (date.diff(moment('26/10/2019', 'DD/MM/YYYY'), 'days') <= 0) continue
+
         const response = await app(request)
-        console.log(response)
+        console.log(response.status)
     }
 }
 
-init()
+const removeAllEntries = async month => {
+    const request = {
+        url: 'worklogs/search',
+        method: 'post',
+        data: {
+            from: moment(month, 'MMMM').startOf('month').format('YYYY-MM-DD'),
+            to: moment(month, 'MMMM').endOf('month').format('YYYY-MM-DD'),
+            workerId: [staticData.workerId]
+        }
+    }
+
+    const response = await app(request)
+
+    for (let i = 0; i < response.data.length; i++) {
+        const item = response.data[i]
+
+        const deleteRequest = {
+            url: `worklogs/${item.tempoWorklogId}`,
+            method: 'delete',
+        }
+        const deleteResponse = await app(deleteRequest)
+
+        console.log(deleteResponse.status)
+
+    }
+}
+
+start()
+
+// removeAllEntries('october')  // may be some problem with headers depending of which function you're using
