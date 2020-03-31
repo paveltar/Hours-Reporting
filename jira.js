@@ -28,6 +28,7 @@ const app = axios.create({
 
 // TODO: convert to Promise.all
 const start = async () => {
+    const promises = []
     for (let i = 0; i < parsedDays.length; i++) {
         const { start, timeWorked, date } = parsedDays[i]
         const data = {
@@ -47,9 +48,13 @@ const start = async () => {
         // // in case you want to dismiss days before specific date
         // if (date.diff(moment('26/10/2019', 'DD/MM/YYYY'), 'days') <= 0) continue
 
-        const response = await app(request)
-        console.log(response.status)
+        promises.push(app(request))
     }
+
+    const responses = await Promise.all(promises)
+    responses.forEach(res => {
+        console.log(res.status)
+    })
 }
 
 const removeAllEntries = async month => {
@@ -64,6 +69,7 @@ const removeAllEntries = async month => {
     }
 
     const response = await app(request)
+    const promises = []
 
     for (let i = 0; i < response.data.length; i++) {
         const item = response.data[i]
@@ -72,11 +78,17 @@ const removeAllEntries = async month => {
             url: `worklogs/${item.tempoWorklogId}`,
             method: 'delete',
         }
-        const deleteResponse = await app(deleteRequest)
 
-        console.log(deleteResponse.status)
+        promises.push(app(deleteRequest))
 
     }
+
+    const responses = await Promise.all(promises)
+
+    responses.forEach(res => {
+        console.log(res.status)
+    })
+
 }
 
 start()
